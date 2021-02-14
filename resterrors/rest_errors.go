@@ -18,6 +18,22 @@ func NewError(msg string) error {
 	return errors.New(msg)
 }
 
+// NewRestError Create new RestErr
+func NewRestError(msg string, status int, err string, causes ...error) *RestErr {
+	RestErr := &RestErr{
+		Message: msg,
+		Status:  status,
+		Error:   err,
+	}
+	if len(causes) != 0 {
+		for _, err := range causes {
+
+			RestErr.Causes = append(RestErr.Causes, err.Error())
+		}
+	}
+	return RestErr
+}
+
 // NewBadRequestError handle bad request error
 func NewBadRequestError(msg string) *RestErr {
 	return &RestErr{
