@@ -1,66 +1,99 @@
 package resterrors
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
-// RestErr handle error
-type RestErr struct {
-	Message string        `json:"message"`
-	Status  int           `json:"status"`
-	Error   string        `json:"error"`
-	Causes  []interface{} `json:"casuse"`
+// RestErr contain rest error interface
+type RestErr interface {
+	Message() string
+	Status() int
+	Error() string
+	Causes() []interface{}
 }
 
-// NewError create new error
-func NewError(msg string) error {
-	return errors.New(msg)
+type restErr struct {
+	ErrMessage string        `json:"message"`
+	ErrStatus  int           `json:"status"`
+	ErrError   string        `json:"error"`
+	ErrCauses  []interface{} `json:"causes"`
 }
 
-// NewRestError Create new RestErr
-func NewRestError(msg string, status int, err string, causes ...error) *RestErr {
-	RestErr := &RestErr{
-		Message: msg,
-		Status:  status,
-		Error:   err,
-	}
-	if len(causes) != 0 {
-		for _, err := range causes {
-
-			RestErr.Causes = append(RestErr.Causes, err.Error())
-		}
-	}
-	return RestErr
+func (e restErr) Error() string {
+	return fmt.Sprintf("message: %s - status: %d - error: %s - causes: %v",
+		e.ErrMessage, e.ErrStatus, e.ErrError, e.ErrCauses)
 }
 
-// NewBadRequestError handle bad request error
-func NewBadRequestError(msg string) *RestErr {
-	return &RestErr{
-		Message: msg,
-		Status:  http.StatusBadRequest,
-		Error:   "bad_request",
-	}
+func (e restErr) Message() string {
+	return e.ErrMessage
 }
 
-// NewNotFoundError no user found
-func NewNotFoundError(msg string) *RestErr {
-	return &RestErr{
-		Message: msg,
-		Status:  http.StatusNotFound,
-		Error:   "not_found",
+func (e restErr) Status() int {
+	return e.ErrStatus
+}
+
+func (e restErr) Causes() []interface{} {
+	return e.ErrCauses
+}
+
+// NewRestError create new rest error
+func NewRestError(message string, status int, err string, causes ...interface{}) RestErr {
+	return restErr{
+		ErrMessage: message,
+		ErrStatus:  status,
+		ErrError:   err,
+		ErrCauses:  causes,
 	}
 }
 
-// NewInternalServerError error due to internal server
-func NewInternalServerError(msg string, err error) *RestErr {
-	result := &RestErr{
-		Message: msg,
-		Status:  http.StatusInternalServerError,
-		Error:   "internal server error",
+// NewRestErrorFromBytes implement error from bytes
+func NewRestErrorFromBytes(bytes []byte) (RestErr, error) {
+	var apiErr restErr
+	if err := json.Unmarshal(bytes, &apiErr); err != nil {
+		return nil, errors.New("invalid json")
+	}
+	return apiErr, nil
+}
+
+// NewBadRequestError handle error from request
+func NewBadRequestError(message string) RestErr {
+	return restErr{
+		ErrMessage: message,
+		ErrStatus:  http.StatusBadRequest,
+		ErrError:   "bad_request",
+	}
+}
+
+// NewNotFoundError handle not found error
+func NewNotFoundError(message string) RestErr {
+	return restErr{
+		ErrMessage: message,
+		ErrStatus:  http.StatusNotFound,
+		ErrError:   "not_found",
+	}
+}
+
+// NewUnauthorizedError handle not permitted error
+func NewUnauthorizedError(message string) RestErr {
+	return restErr{
+		ErrMessage: message,
+		ErrStatus:  http.StatusUnauthorized,
+		ErrError:   "unauthorized",
+	}
+}
+
+// NewInternalServerError handle error relating ro server
+func NewInternalServerError(message string, err error) RestErr {
+	result := restErr{
+		ErrMessage: message,
+		ErrStatus:  http.StatusInternalServerError,
+		ErrError:   "internal_server_error",
 	}
 	if err != nil {
-		result.Causes = append(result.Causes, err.Error())
+		result.ErrCauses = append(result.ErrCauses, err.Error())
 	}
 	return result
 }

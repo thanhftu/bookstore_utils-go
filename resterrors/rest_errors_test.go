@@ -9,9 +9,9 @@ import (
 )
 
 func TestNewError(t *testing.T) {
-	err := NewError("This is error for test")
+	err := NewRestError("test error", http.StatusNotImplemented, "not_implement")
 	assert.NotNil(t, err)
-	assert.EqualValues(t, "This is error for test", err.Error())
+	assert.EqualValues(t, "message: test error - status: 501 - error: not_implement - causes: []", err.Error())
 }
 
 func TestNewRestError(t *testing.T) {
@@ -28,7 +28,7 @@ func TestNewRestError(t *testing.T) {
 	assert.EqualValues(t, "error 2 with cause", err2.Message)
 	assert.EqualValues(t, "error_2", err2.Error)
 	assert.NotNil(t, err2.Causes)
-	assert.EqualValues(t, 1, len(err2.Causes))
+	assert.EqualValues(t, 1, len(err2.Causes()))
 }
 func TestNewInternalServerError(t *testing.T) {
 	err := NewInternalServerError("this is message", errors.New("database error"))
@@ -38,7 +38,7 @@ func TestNewInternalServerError(t *testing.T) {
 	assert.EqualValues(t, "internal server error", err.Error)
 
 	assert.NotNil(t, err.Causes)
-	assert.EqualValues(t, "database error", err.Causes[0])
-	assert.EqualValues(t, 1, len(err.Causes))
+	assert.EqualValues(t, "database error", err.Causes()[0])
+	assert.EqualValues(t, 1, len(err.Causes()))
 
 }
